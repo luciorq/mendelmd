@@ -72,6 +72,7 @@
                 {% if user.is_staff %}
                 <th>Options</th>
                 {% endif %}
+                <th>Location</th>
                 <th>Uploaded By</th>
                 <th>Nº Lines</th>
                 <th>Created on</th>
@@ -108,6 +109,7 @@
                     </ul>
                 </td>
                 {% endif %}
+                <td>{{ individual.location }}</td>
                 <td>{{ individual.user.username }}</td>
                 <td>{{ individual.n_lines }}</td>
                 <td>{{ individual.creation_date }}</td>

@@ -17,7 +17,7 @@ oFormObject.elements["impact"][0].selected = true;
 oFormObject.elements["dbsnp_option"].value = '>';
 oFormObject.elements["dbsnp_build"].value = '130';
 oFormObject.elements["genomes1000"].value = '0 - 0.01';
-oFormObject.elements["dbsnp_frequency"].value = '0 - 0.01';
-oFormObject.elements["esp_frequency"].value = '0 - 0.01';
+oFormObject.elements["gnomead_exomes_frequency"].value = '0 - 0.01';
+oFormObject.elements["gnomead_genomes_frequency"].value = '0 - 0.01';
 
 });

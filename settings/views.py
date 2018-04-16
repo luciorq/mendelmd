@@ -42,7 +42,7 @@ def create_s3_credential(request):
 
 class S3CredentialUpdate(LoginRequiredMixin, UpdateView):
     model = S3Credential
-    fields = ['name', 'access_key', 'secret_key', 'buckets', 'exclude_paths', 'exclude_files']
+    fields = ['name', 'access_key', 'secret_key', 'params', 'buckets', 'exclude_paths', 'exclude_files']
 
     def get_queryset(self):
         if not self.request.user.is_staff:

@@ -14,6 +14,8 @@ from django.db.models import Q
 from collections import Counter
 
 from files.models import File
+from .tasks import annotate_vcf, insert_vcf
+
 
 @login_required
 def index(request):
@@ -61,7 +63,11 @@ def run_task(request, task_id):
     else:
         task = Task.objects.get(pk=task_id, user=request.user)
 
-    task_run_task.delay(task.id)
+    if task.action == 'annotate':
+        annotate_vcf.delay(task.id)
+    if task.action == 'populate':
+        insert_vcf.delay(task.id)
+
 
     # if task.action == "check":
     #     check_file.delay(task.id)
@@ -106,9 +112,16 @@ def bulk_action(request):
             #save to change modified date
             task.save()
 
+
+
             if action == "run":
                 
-                task_run_task.delay(task.id)
+                # task_run_task.delay(task.id)
+                if task.action == 'annotate':
+                    annotate_vcf.delay(task.id)
+                if task.action == 'populate':
+                    insert_vcf.delay(task.id)
+
                 # if task.action == "qc":
                 #     task.status = 'scheduled'
                 #     run_qc.delay(task.id)

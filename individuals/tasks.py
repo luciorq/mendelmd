@@ -289,7 +289,6 @@ def parse_vcf(line):
     variant_line = line.strip().split('\t')
     # print(variant_line)
 
-
     variant['chr'] = variant_line[0]
 
     #treat vcfs with chr on the begining of chromossome names
@@ -360,6 +359,23 @@ def parse_vcf(line):
     else:
         variant['vartype'] = None
 
+    if 'CLASS' in information:
+        variant['hgmd_class'] = information['CLASS']
+    else:
+        variant['hgmd_class'] = None
+
+    if 'PHEN' in information:
+        variant['hgmd_phen'] = information['PHEN']
+    else:
+        variant['hgmd_phen'] = None
+
+    if 'OM' in information:
+        variant['is_at_omim'] = True
+    else:
+        variant['is_at_omim'] = False
+
+
+
     #serialize object with pickle
     variant['info'] = json.dumps(information)#.decode("utf-8", "ignore")
 
@@ -368,9 +384,9 @@ def parse_vcf(line):
 
     #parse VEP
     #Allele|Consequence|IMPACT|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|EXON|INTRON|HGVSc|HGVSp|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|DISTANCE|STRAND|FLAGS|SYMBOL_SOURCE|HGNC_ID|SIFT|PolyPhen
-
+    vep = OrderedDict()
     if 'CSQ' in information:
-        vep = OrderedDict()
+        # vep = OrderedDict()
         vep_list = information['CSQ'].split('|')
 
         vep['Allele'] = vep_list[0]
@@ -378,29 +394,35 @@ def parse_vcf(line):
         vep['IMPACT'] = vep_list[2]
         vep['SYMBOL'] = vep_list[3]
         vep['Gene'] = vep_list[4]
-        vep['Feature_type'] = vep_list[5]
-        vep['Feature'] = vep_list[6]
-        vep['BIOTYPE'] = vep_list[7]
-        vep['EXON'] = vep_list[8]
-        vep['INTRON'] = vep_list[9]
-        vep['HGVSc'] = vep_list[10]
-        vep['HGVSp'] = vep_list[11]
+        # vep['Feature_type'] = vep_list[5]
+        # vep['Feature'] = vep_list[6]
+        # vep['BIOTYPE'] = vep_list[7]
+        # vep['EXON'] = vep_list[8]
+        # vep['INTRON'] = vep_list[9]
+        # vep['HGVSc'] = vep_list[10]
+        # vep['HGVSp'] = vep_list[11]
 
-        vep['cDNA_position'] = vep_list[12]
-        vep['CDS_position'] = vep_list[13]
-        vep['Protein_position'] = vep_list[14]
-        vep['Amino_acids'] = vep_list[15]
-        vep['Codons'] = vep_list[16]
-        vep['Existing_variation'] = vep_list[17]
-        vep['DISTANCE'] = vep_list[18]
-        vep['STRAND'] = vep_list[19]
-        vep['FLAGS'] = vep_list[20]
+        # vep['cDNA_position'] = vep_list[12]
+        # vep['CDS_position'] = vep_list[13]
+        # vep['Protein_position'] = vep_list[14]
+        # vep['Amino_acids'] = vep_list[15]
+        # vep['Codons'] = vep_list[16]
+        # vep['Existing_variation'] = vep_list[17]
+        # vep['DISTANCE'] = vep_list[18]
+        # vep['STRAND'] = vep_list[19]
+        # vep['FLAGS'] = vep_list[20]
 
-        vep['SYMBOL_SOURCE'] = vep_list[21]
-        vep['HGNC_ID'] = vep_list[22]
+        # vep['SYMBOL_SOURCE'] = vep_list[21]
+        # vep['HGNC_ID'] = vep_list[22]
         vep['sift'] = vep_list[23]
         vep['polyphen2'] = vep_list[24]
+        vep['1000g_af'] = vep_list[26]
 
+        vep['CADD_raw'] = vep_list[32]
+        vep['M-CAP_score'] = vep_list[36]
+
+        vep['gnomead_exome_af'] = vep_list[45]
+        vep['gnomead_genome_af'] = vep_list[48]
 
         # print vep
         variant['vep'] = vep
@@ -424,6 +446,32 @@ def parse_vcf(line):
                 variant[tag] = float(value[1].replace(')',''))
                 variant[tag_pred] = value[0]
 
+    float_list = ['1000g_af', 'gnomead_exome_af', 'gnomead_genome_af']
+    for tag in float_list:
+        if tag in vep:
+            if vep[tag] != '':
+                variant[tag] = treat_float_min(vep[tag])
+            else:
+                variant[tag] = None
+        else:
+            variant[tag] = None
+
+    if 'CADD_raw' in vep:
+        if vep['CADD_raw'] != '':
+            variant['cadd'] = treat_float_max(vep['CADD_raw'])
+        else:
+            variant['cadd']=None
+    else:
+        variant['cadd']=None
+
+    if 'M-CAP_score' in vep:
+        if vep['M-CAP_score'] != '':
+            variant['mcap'] = treat_float_max(vep['M-CAP_score'])
+        else:
+            variant['mcap']=None
+    else:
+        variant['mcap']=None
+
     #parse SNPEFF
     ##INFO=<ID=EFF,Number=.,Type=String,Description="Predicted effects for this variant.Format: 'Effect ( Effect_Impact | Functional_Class | Codon_Change | Amino_Acid_Change| Amino_Acid_length | Gene_Name | Transcript_BioType | Gene_Coding | Transcript_ID | Exon_Rank  | Genotype_Number [ | ERRORS | WARNINGS ] )' ">
 
@@ -445,91 +493,75 @@ def parse_vcf(line):
             snpeff['func_class'] = effects[1]
             snpeff['codon_change'] = effects[2]
             snpeff['aa_change'] = effects[3]
-            snpeff['aa_len'] = effects[4]
-            snpeff['gene_name'] = effects[5]
-            snpeff['biotype'] = effects[6]
-            snpeff['gene_coding'] = effects[7]
-            snpeff['transcript_id'] = effects[8]
-            snpeff['exon_rank'] = effects[9]
-            snpeff['genotype_number'] = effects[10].split(')')[0]
+            # snpeff['aa_len'] = effects[4]
+            # snpeff['gene_name'] = effects[5]
+            # snpeff['biotype'] = effects[6]
+            # snpeff['gene_coding'] = effects[7]
+            # snpeff['transcript_id'] = effects[8]
+            # snpeff['exon_rank'] = effects[9]
+            # snpeff['genotype_number'] = effects[10].split(')')[0]
             variant['snpeff'].append(snpeff)
 
-    float_list = ['genomes1k.AF']
-    for tag in float_list:
-        if tag in information:
-            variant[tag] = treat_float_min(information[tag])
-        else:
-             variant[tag] = None
+    
 
     #Special TAG FROM ESP6500
-    try:
-      variant['esp6500.MAF'] = float(information['esp6500.MAF'].split(',')[-1]) / 100.0
-    except (KeyError):
-      variant['esp6500.MAF'] = None
+    # try:
+    #   variant['esp6500.MAF'] = float(information['esp6500.MAF'].split(',')[-1]) / 100.0
+    # except (KeyError):
+    #   variant['esp6500.MAF'] = None
     #dbsnp CAF
-    try:
-        caf = information['dbsnp.CAF']
-        caf = caf.replace('[', '').replace(']', '').split(',')
-        # print 'caf', caf
-        floats = []
-        for x in caf:
-            if x != '.':
-                floats.append(float(x))
-        # print sorted(floats, key=float, reverse=True)
-        #get always second element from this list
-        variant['dbsnp.MAF'] = floats[1]
-    except (KeyError):
-        variant['dbsnp.MAF'] = None
+    # try:
+    #     caf = information['dbsnp.CAF']
+    #     caf = caf.replace('[', '').replace(']', '').split(',')
+    #     # print 'caf', caf
+    #     floats = []
+    #     for x in caf:
+    #         if x != '.':
+    #             floats.append(float(x))
+    #     # print sorted(floats, key=float, reverse=True)
+    #     #get always second element from this list
+    #     variant['dbsnp.MAF'] = floats[1]
+    # except (KeyError):
+    #     variant['dbsnp.MAF'] = None
 
-    if 'dbsnp.dbSNPBuildID' in information:
-        information['dbsnp.dbSNPBuildID'] = min(information['dbsnp.dbSNPBuildID'].split(','))
-        variant['dbsnp_build'] = int(information['dbsnp.dbSNPBuildID'])
+    if 'dbSNPBuildID' in information:
+        information['dbSNPBuildID'] = min(information['dbSNPBuildID'].split(','))
+        variant['dbsnp_build'] = int(information['dbSNPBuildID'])
     else:
         variant['dbsnp_build'] = None
 
-    dbnfsp_fields = ['dbNSFP_SIFT_score', 'dbNSFP_SIFT_converted_rankscore', 'dbNSFP_SIFT_pred', 'dbNSFP_Uniprot_acc_Polyphen2', 'dbNSFP_Uniprot_id_Polyphen2', 'dbNSFP_Uniprot_aapos_Polyphen2', 'dbNSFP_Polyphen2_HDIV_score', 'dbNSFP_Polyphen2_HDIV_rankscore', 'dbNSFP_Polyphen2_HDIV_pred', 'dbNSFP_Polyphen2_HVAR_score', 'dbNSFP_Polyphen2_HVAR_rankscore', 'dbNSFP_Polyphen2_HVAR_pred', 'dbNSFP_LRT_score', 'dbNSFP_LRT_converted_rankscore', 'dbNSFP_LRT_pred', 'dbNSFP_LRT_Omega', 'dbNSFP_MutationTaster_score', 'dbNSFP_MutationTaster_converted_rankscore', 'dbNSFP_MutationTaster_pred', 'dbNSFP_MutationTaster_model', 'dbNSFP_MutationTaster_AAE', 'dbNSFP_MutationAssessor_UniprotID', 'dbNSFP_MutationAssessor_variant', 'dbNSFP_MutationAssessor_score', 'dbNSFP_MutationAssessor_rankscore', 'dbNSFP_MutationAssessor_pred', 'dbNSFP_FATHMM_score', 'dbNSFP_FATHMM_converted_rankscore', 'dbNSFP_FATHMM_pred', 'dbNSFP_PROVEAN_score', 'dbNSFP_PROVEAN_converted_rankscore', 'dbNSFP_PROVEAN_pred', 'dbNSFP_Transcript_id_VEST3', 'dbNSFP_Transcript_var_VEST3', 'dbNSFP_VEST3_score', 'dbNSFP_VEST3_rankscore', 'dbNSFP_MetaSVM_score', 'dbNSFP_MetaSVM_rankscore', 'dbNSFP_MetaSVM_pred', 'dbNSFP_MetaLR_score', 'dbNSFP_MetaLR_rankscore', 'dbNSFP_MetaLR_pred', 'dbNSFP_Reliability_index', 'dbNSFP_M-CAP_score', 'dbNSFP_M-CAP_rankscore', 'dbNSFP_M-CAP_pred', 'dbNSFP_REVEL_score', 'dbNSFP_REVEL_rankscore', 'dbNSFP_MutPred_score', 'dbNSFP_MutPred_rankscore', 'dbNSFP_MutPred_protID', 'dbNSFP_MutPred_AAchange', 'dbNSFP_MutPred_Top5features', 'dbNSFP_CADD_raw', 'dbNSFP_CADD_raw_rankscore', 'dbNSFP_CADD_phred', 'dbNSFP_DANN_score', 'dbNSFP_DANN_rankscore', 'dbNSFP_fathmm-MKL_coding_score', 'dbNSFP_fathmm-MKL_coding_rankscore', 'dbNSFP_fathmm-MKL_coding_pred', 'dbNSFP_fathmm-MKL_coding_group', 'dbNSFP_Eigen_coding_or_noncoding', 'dbNSFP_Eigen-raw', 'dbNSFP_Eigen-phred', 'dbNSFP_Eigen-PC-raw', 'dbNSFP_Eigen-PC-phred', 'dbNSFP_Eigen-PC-raw_rankscore', 'dbNSFP_GenoCanyon_score', 'dbNSFP_GenoCanyon_score_rankscore', 'dbNSFP_integrated_fitCons_score', 'dbNSFP_integrated_fitCons_rankscore', 'dbNSFP_integrated_confidence_value', 'dbNSFP_GM12878_fitCons_score', 'dbNSFP_GM12878_fitCons_rankscore', 'dbNSFP_GM12878_confidence_value', 'dbNSFP_H1-hESC_fitCons_score', 'dbNSFP_H1-hESC_fitCons_rankscore', 'dbNSFP_H1-hESC_confidence_value', 'dbNSFP_HUVEC_fitCons_score', 'dbNSFP_HUVEC_fitCons_rankscore', 'dbNSFP_clinvar_rs', 'dbNSFP_clinvar_clnsig', 'dbNSFP_clinvar_trait', 'dbNSFP_clinvar_golden_stars']
-    dbnfsp = {}
+    # dbnfsp_fields = ['dbNSFP_SIFT_score', 'dbNSFP_SIFT_converted_rankscore', 'dbNSFP_SIFT_pred', 'dbNSFP_Uniprot_acc_Polyphen2', 'dbNSFP_Uniprot_id_Polyphen2', 'dbNSFP_Uniprot_aapos_Polyphen2', 'dbNSFP_Polyphen2_HDIV_score', 'dbNSFP_Polyphen2_HDIV_rankscore', 'dbNSFP_Polyphen2_HDIV_pred', 'dbNSFP_Polyphen2_HVAR_score', 'dbNSFP_Polyphen2_HVAR_rankscore', 'dbNSFP_Polyphen2_HVAR_pred', 'dbNSFP_LRT_score', 'dbNSFP_LRT_converted_rankscore', 'dbNSFP_LRT_pred', 'dbNSFP_LRT_Omega', 'dbNSFP_MutationTaster_score', 'dbNSFP_MutationTaster_converted_rankscore', 'dbNSFP_MutationTaster_pred', 'dbNSFP_MutationTaster_model', 'dbNSFP_MutationTaster_AAE', 'dbNSFP_MutationAssessor_UniprotID', 'dbNSFP_MutationAssessor_variant', 'dbNSFP_MutationAssessor_score', 'dbNSFP_MutationAssessor_rankscore', 'dbNSFP_MutationAssessor_pred', 'dbNSFP_FATHMM_score', 'dbNSFP_FATHMM_converted_rankscore', 'dbNSFP_FATHMM_pred', 'dbNSFP_PROVEAN_score', 'dbNSFP_PROVEAN_converted_rankscore', 'dbNSFP_PROVEAN_pred', 'dbNSFP_Transcript_id_VEST3', 'dbNSFP_Transcript_var_VEST3', 'dbNSFP_VEST3_score', 'dbNSFP_VEST3_rankscore', 'dbNSFP_MetaSVM_score', 'dbNSFP_MetaSVM_rankscore', 'dbNSFP_MetaSVM_pred', 'dbNSFP_MetaLR_score', 'dbNSFP_MetaLR_rankscore', 'dbNSFP_MetaLR_pred', 'dbNSFP_Reliability_index', 'dbNSFP_M-CAP_score', 'dbNSFP_M-CAP_rankscore', 'dbNSFP_M-CAP_pred', 'dbNSFP_REVEL_score', 'dbNSFP_REVEL_rankscore', 'dbNSFP_MutPred_score', 'dbNSFP_MutPred_rankscore', 'dbNSFP_MutPred_protID', 'dbNSFP_MutPred_AAchange', 'dbNSFP_MutPred_Top5features', 'dbNSFP_CADD_raw', 'dbNSFP_CADD_raw_rankscore', 'dbNSFP_CADD_phred', 'dbNSFP_DANN_score', 'dbNSFP_DANN_rankscore', 'dbNSFP_fathmm-MKL_coding_score', 'dbNSFP_fathmm-MKL_coding_rankscore', 'dbNSFP_fathmm-MKL_coding_pred', 'dbNSFP_fathmm-MKL_coding_group', 'dbNSFP_Eigen_coding_or_noncoding', 'dbNSFP_Eigen-raw', 'dbNSFP_Eigen-phred', 'dbNSFP_Eigen-PC-raw', 'dbNSFP_Eigen-PC-phred', 'dbNSFP_Eigen-PC-raw_rankscore', 'dbNSFP_GenoCanyon_score', 'dbNSFP_GenoCanyon_score_rankscore', 'dbNSFP_integrated_fitCons_score', 'dbNSFP_integrated_fitCons_rankscore', 'dbNSFP_integrated_confidence_value', 'dbNSFP_GM12878_fitCons_score', 'dbNSFP_GM12878_fitCons_rankscore', 'dbNSFP_GM12878_confidence_value', 'dbNSFP_H1-hESC_fitCons_score', 'dbNSFP_H1-hESC_fitCons_rankscore', 'dbNSFP_H1-hESC_confidence_value', 'dbNSFP_HUVEC_fitCons_score', 'dbNSFP_HUVEC_fitCons_rankscore', 'dbNSFP_clinvar_rs', 'dbNSFP_clinvar_clnsig', 'dbNSFP_clinvar_trait', 'dbNSFP_clinvar_golden_stars']
+    # dbnfsp = {}
 
-    for field in dbnfsp_fields:
-        if field in information:
-            dbnfsp[field] = information[field]
-        else:
-            dbnfsp[field] = None
-    # print(dbnfsp)
+    # for field in dbnfsp_fields:
+    #     if field in information:
+    #         dbnfsp[field] = information[field]
+    #     else:
+    #         dbnfsp[field] = None
+    # # print(dbnfsp)
 
-    variant['dbNSFP'] = dbnfsp
+    # variant['dbNSFP'] = dbnfsp
 
     # #cadd
-    if 'dbNSFP_CADD_raw' in information:
-        variant['cadd'] = treat_float_max(dbnfsp['dbNSFP_CADD_raw'])
-    else:
-        variant['cadd']=None
-
-    if 'dbNSFP_M-CAP_score' in information:
-        variant['mcap'] = treat_float_max(dbnfsp['dbNSFP_M-CAP_score'])
-    else:
-        variant['mcap']=None
-
-
-
+        
 
     #is at OMIM
-    if 'clinvar.OM' in information:
-        variant['is_at_omim'] = True
-    else:
-        variant['is_at_omim'] = False
+    # if 'clinvar.OM' in information:
+    #     variant['is_at_omim'] = True
+    # else:
+    #     variant['is_at_omim'] = False
     #is at HGMD
-    if 'HGMD' in information:
-        variant['is_at_hgmd'] = True
-        variant['hgmd_entries'] = information['HGMD']
-    else:
-        variant['is_at_hgmd'] = False
-        variant['hgmd_entries'] = None
+    # if 'HGMD' in information:
+    #     variant['is_at_hgmd'] = True
+    #     variant['hgmd_entries'] = information['HGMD']
+    # else:
+    #     variant['is_at_hgmd'] = False
+    #     variant['hgmd_entries'] = None
 
-    if 'HI_PREDICTIONS' in information:
-        variant['hi_index_str'] = information['HI_PREDICTIONS']
-    else:
-        variant['hi_index_str'] = None
+    # if 'HI_PREDICTIONS' in information:
+    #     variant['hi_index_str'] = information['HI_PREDICTIONS']
+    # else:
+    #     variant['hi_index_str'] = None
 
     #create unique index for each chr-pos-genotype
     #genotype, ref and alt
@@ -549,16 +581,14 @@ def parse_vcf(line):
             ind_genotype_list.append(genotype_list[int(variant['genotype'][-1])])
         else:
             ind_genotype_list.append(genotype_list[1])
-
     else:
         ind_genotype_list.append(genotype_list[0])
+    
     ind_genotype_list = sorted(ind_genotype_list)
 
     variant['index'] = '%s-%s-%s' % (variant['chr'], variant['pos'], "-".join(ind_genotype_list))
     variant['pos_index'] = '%s-%s' % (variant['chr'], variant['pos'])
 
-    # print index
-    # print(variant)
     return variant
 
 @shared_task()

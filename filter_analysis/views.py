@@ -136,13 +136,13 @@ def filter_analysis_table(request):
     #Variant type SNP EFF       
     filter_variant_type_snpeff(request, query)
     #DBSNP
-    filter_dbsnp(request, query)
+    # filter_dbsnp(request, query)
     #1000genomes
     filter_by_1000g(request, args)
     #dbsnp Freq
-    filter_by_dbsnp(request, args)
+    filter_by_gnomead_exomes(request, args)
     #Exome Variation Server Freq
-    filter_by_esp(request, args)
+    filter_by_gnomead_genomes(request, args)
     #hi score
     # filter_by_hi_score(request, args)
     #SIFT
@@ -256,10 +256,13 @@ def filter_analysis(request,query, args, exclude):
 
     #1000genomes
     filter_by_1000g(request, args)
-    #dbsnp Freq
-    filter_by_dbsnp(request, args)
+    filter_by_gnomead_exomes(request, args)
     #Exome Variation Server Freq
-    filter_by_esp(request, args)
+    filter_by_gnomead_genomes(request, args)    
+    #dbsnp Freq
+    # filter_by_dbsnp(request, args)
+    #Exome Variation Server Freq
+    # filter_by_esp(request, args)
 
     #SIFT
     filter_by_sift(request, args)

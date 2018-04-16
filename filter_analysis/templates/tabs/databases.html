@@ -13,27 +13,26 @@
             {{form.genomes1000_exclude}}{{form.genomes1000_exclude.label}}
 
         </td>
-        <td>DBSNP FREQUENCY</td>
+        <td>GnomeAD Exomes FREQUENCY</td>
         <td>
 
-            {{ form.dbsnp_frequency.errors }}{{ form.dbsnp_frequency }}
+            {{ form.gnomead_exomes_frequency.errors }}{{ form.gnomead_exomes_frequency }}
             <br>
             <!-- Slider -->
             <div id="dbsnp-slider-range"></div>
             <br>
             <!--end slider-->
-
-            {{form.dbsnp_exclude}}{{form.dbsnp_exclude.label}}
+            {{form.gnomead_exomes_exclude}}{{form.gnomead_exomes_exclude.label}}
         </td>
-        <td>ESP6500 FREQUENCY</td>
+        <td>GnomeAD Genomes FREQUENCY</td>
         <td>
-            {{ form.esp_frequency.errors }}{{ form.esp_frequency }}
+            {{ form.gnomead_genomes_frequency.errors }}{{ form.gnomead_genomes_frequency }}
             <br>
             <!-- Slider -->
             <div id="esp-slider-range"></div>
             <br>
             <!--end slider-->
-            {{form.esp_exclude}}{{form.esp_exclude.label}}
+            {{form.gnomead_genomes_exclude}}{{form.gnomead_genomes_exclude.label}}
 
         </td>
 

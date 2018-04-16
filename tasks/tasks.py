@@ -112,7 +112,11 @@ def task_run_task(task_id):
     
     start = datetime.datetime.now()
     manifest = task.manifest
-    task.machine = socket.gethostbyname(socket.gethostname())
+    # task.machine = socket.gethostbyname(socket.gethostname())
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    task.machine = s.getsockname()[0]
+    s.close()
     task.status = 'running'
     task.started = start
     task.save()
@@ -181,7 +185,6 @@ def task_run_task(task_id):
         print(command)
         output = run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         log_output += output.stdout.decode('utf-8')
-
 
     AWS.upload(task_location+'/output', task.id)
 
@@ -409,7 +412,11 @@ def annotate_vcf(task_id):
     start = datetime.datetime.now()
 
     task = Task.objects.get(id=task_id)
-    task.machine = socket.gethostbyname(socket.gethostname())
+    
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    task.machine = s.getsockname()[0]
+
     task.status = 'running'
     task.started = start
     task.save()
@@ -420,7 +427,7 @@ def annotate_vcf(task_id):
 
     path, vcf = os.path.split(individual.location)
 
-    task_location = '/tmp/tasks/%s/' % (task.id)
+    task_location = '/projects/tasks/%s/' % (task.id)
     command = 'mkdir -p %s' % (task_location)
     run(command, shell=True)
     os.chdir(task_location)
@@ -429,11 +436,11 @@ def annotate_vcf(task_id):
     # os.makedirs(directory)
 
     #get vcf from remote location
-    worker = IWorker()
-    worker.get(task.id, individual.location)
+    worker = AWS()
+    worker.get(individual.location, task.id)
     #annotate it
 
-    filename = vcf
+    filename = vcf.strip()
 
     if filename.endswith('.vcf'):
         command = 'cp %s sample.vcf' % (filename)
@@ -451,6 +458,8 @@ def annotate_vcf(task_id):
         command = 'mv %s sample.vcf' % (filename.replace('.rar', ''))
         os.system(command)
 
+
+
     command = 'pynnotator -i sample.vcf'
     run(command, shell=True)
 
@@ -462,17 +471,18 @@ def annotate_vcf(task_id):
 
         #send results to s3
         print('Send to S3')
-        local = '/tmp/tasks/%s/annotation.final.vcf.zip' % (task.id)
-        worker.put(task.id, local)
+        local = '/projects/tasks/%s/annotation.final.vcf.zip' % (task.id)
+        worker.upload(local,individual.id)
         stop = datetime.datetime.now()
         elapsed = stop - start
         individual.annotation_time = elapsed
+        individual.status = 'annotated'
         individual.save()
         task.status = 'annotated'
         # task.execution_time = elapsed
         task.save()
 
-        task_location = '/tmp/tasks/%s/' % (task.id)
+        task_location = '/projects/tasks/%s/' % (task.id)
         command = 'rm -rf %s' % (task_location)
         run(command, shell=True)
         #add insertion task
@@ -488,16 +498,21 @@ def insert_vcf(task_id):
     task = Task.objects.get(pk=task_id)
     individual = task.individuals.all()[0]
 
-    vcf = '/tmp/tasks/%s/annotation.final.vcf.zip' % (task.id)
+    vcf = '/projects/tasks/%s/annotation.final.vcf.zip' % (task.id)
 
-    task_location = '/tmp/tasks/%s/' % (task.id)
+    task_location = '/projects/tasks/%s/' % (task.id)
     command = 'mkdir -p %s' % (task_location)
     run(command, shell=True)
     os.chdir(task_location)
 
-    worker = IWorker()
-    worker.get(task.id)
-    task_location = '/tmp/tasks/%s/' % (task.id)
+    annotation_file = '{}{}/annotation.final.vcf.zip'.format(settings.UPLOAD_FOLDER, individual.id)
+
+    worker = AWS()
+
+    if not os.path.isfile(vcf):
+        worker.get(annotation_file, task.id)
+    
+    task_location = '/projects/tasks/%s/' % (task.id)
     command = 'mkdir -p %s' % (task_location)
     run(command, shell=True)
     os.chdir(task_location)
@@ -507,7 +522,7 @@ def insert_vcf(task_id):
     #SnpeffAnnotation.objects.filter(individual=individual).delete()
     #VEPAnnotation.objects.filter(individual=individual).delete()
 
-    filepath = '/tmp/tasks/%s' % (task.id)
+    filepath = '/projects/tasks/%s' % (task.id)
 
     print('Populating %s' % (individual.id))
 
@@ -558,30 +573,29 @@ def insert_vcf(task_id):
                 alt=variant['alt'],
                 qual=variant['qual'],
                 filter=variant['filter'],
-                info=variant['info'],
+                # info=variant['info'],
                 genotype=variant['genotype'],
                 genotype_col=variant['genotype_col'],
                 format=variant['format'],
                 read_depth=variant['read_depth'],
                 gene=variant['gene'],
                 mutation_type=variant['mutation_type'],
-                vartype=variant['vartype'],
-                genomes1k_maf=variant['genomes1k.AF'],
-                dbsnp_maf=variant['dbsnp.MAF'],
-                esp_maf=variant['esp6500.MAF'],
+                # vartype=variant['vartype'],
+                genomes1k_maf=variant['1000g_af'],
+                gnomead_exome_maf=variant['gnomead_exome_af'],
+                gnomead_genome_maf=variant['gnomead_genome_af'],
+                # dbsnp_maf=variant['dbsnp.MAF'],
+                # esp_maf=variant['esp6500.MAF'],
                 dbsnp_build=variant['dbsnp_build'],
                 sift=variant['sift'],
                 sift_pred=variant['sift_pred'],
                 polyphen2=variant['polyphen2'],
                 polyphen2_pred=variant['polyphen2_pred'],
-                # condel=variant['condel'],
-                # condel_pred=variant['condel_pred'],
                 cadd=variant['cadd'],
-                # dann=variant['dann'],
+                hgmd_class=variant['hgmd_class'],
+                hgmd_phen=variant['hgmd_phen'],
                 is_at_omim=variant['is_at_omim'],
-                is_at_hgmd=variant['is_at_hgmd'],
-                hgmd_entries=variant['hgmd_entries'],
-                hi_index_str=variant['hi_index_str'],
+
                 )
 
                 # print variant['index']
@@ -597,35 +611,35 @@ def insert_vcf(task_id):
                     variant_obj.snpeff_codon_change=variant['snpeff'][0]['codon_change']
                     variant_obj.snpeff_aa_change=variant['snpeff'][0]['aa_change']
                     # variant_obj.snpeff_aa_len=variant['snpeff'][0]['aa_len']
-                    variant_obj.snpeff_gene_name=variant['snpeff'][0]['gene_name']
-                    variant_obj.snpeff_biotype=variant['snpeff'][0]['biotype']
-                    variant_obj.snpeff_gene_coding=variant['snpeff'][0]['gene_coding']
-                    variant_obj.snpeff_transcript_id=variant['snpeff'][0]['transcript_id']
-                    variant_obj.snpeff_exon_rank=variant['snpeff'][0]['exon_rank']
+                    # variant_obj.snpeff_gene_name=variant['snpeff'][0]['gene_name']
+                    # variant_obj.snpeff_biotype=variant['snpeff'][0]['biotype']
+                    # variant_obj.snpeff_gene_coding=variant['snpeff'][0]['gene_coding']
+                    # variant_obj.snpeff_transcript_id=variant['snpeff'][0]['transcript_id']
+                    # variant_obj.snpeff_exon_rank=variant['snpeff'][0]['exon_rank']
                     # variant_obj.snpeff_genotype_number=variant['snpeff'][0]['genotype_number']
                     #)
                     #snpeff_dict[variant['index']] = snpeff
 
-                #parse vep
-                if 'vep' in variant:
-                    #vep = VEPAnnotation(
-                    variant_obj.vep_allele=variant['vep']['Allele']
-                    variant_obj.vep_gene=variant['vep']['Gene']
-                    variant_obj.vep_feature=variant['vep']['Feature']
-                    variant_obj.vep_feature_type=variant['vep']['Feature_type']
-                    variant_obj.vep_consequence=variant['vep']['Consequence']
-                    variant_obj.vep_cdna_position=variant['vep']['cDNA_position']
-                    variant_obj.vep_cds_position=variant['vep']['CDS_position']
-                    variant_obj.vep_protein_position=variant['vep']['Protein_position']
-                    variant_obj.vep_amino_acids=variant['vep']['Amino_acids']
-                    variant_obj.vep_codons=variant['vep']['Codons']
-                    variant_obj.vep_existing_variation=variant['vep']['Existing_variation']
-                    variant_obj.vep_distance=variant['vep']['DISTANCE']
-                    variant_obj.vep_strand=variant['vep']['STRAND']
-                    variant_obj.vep_symbol=variant['vep']['SYMBOL']
-                    variant_obj.vep_symbol_source=variant['vep']['SYMBOL_SOURCE']
-                    variant_obj.vep_sift=variant['vep']['sift']
-                    variant_obj.vep_polyphen=variant['vep']['polyphen2']
+                # #parse vep
+                # if 'vep' in variant:
+                #     #vep = VEPAnnotation(
+                #     variant_obj.vep_allele=variant['vep']['Allele']
+                #     variant_obj.vep_gene=variant['vep']['Gene']
+                    # variant_obj.vep_feature=variant['vep']['Feature']
+                    # variant_obj.vep_feature_type=variant['vep']['Feature_type']
+                    # variant_obj.vep_consequence=variant['vep']['Consequence']
+                    # variant_obj.vep_cdna_position=variant['vep']['cDNA_position']
+                    # variant_obj.vep_cds_position=variant['vep']['CDS_position']
+                    # variant_obj.vep_protein_position=variant['vep']['Protein_position']
+                    # variant_obj.vep_amino_acids=variant['vep']['Amino_acids']
+                    # variant_obj.vep_codons=variant['vep']['Codons']
+                    # variant_obj.vep_existing_variation=variant['vep']['Existing_variation']
+                    # variant_obj.vep_distance=variant['vep']['DISTANCE']
+                    # variant_obj.vep_strand=variant['vep']['STRAND']
+                    # variant_obj.vep_symbol=variant['vep']['SYMBOL']
+                    # variant_obj.vep_symbol_source=variant['vep']['SYMBOL_SOURCE']
+                    # variant_obj.vep_sift=variant['vep']['sift']
+                    # variant_obj.vep_polyphen=variant['vep']['polyphen2']
                     # variant_obj.vep_condel=variant['vep']['condel']
                     # variant_obj.rf_score=variant['vep']['rf_score']
                     # variant_obj.ada_score=variant['vep']['ada_score']

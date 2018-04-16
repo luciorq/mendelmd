@@ -246,7 +246,6 @@ def filter_varisnp(request, query, exclude):
         # snp_list = list(snp_list)
         # print 'snp_list depois', len(snp_list), snp_list[:5]
 
-
         if 'variant_id__in' in exclude:
             # print 'varisnp variant_id__in ja existe!'
             # print snp_list
@@ -270,33 +269,39 @@ def filter_by_1000g(request, args):
                 max = float(genomes1000[0])
                 args.append((Q(genomes1k_maf__lte=max) & Q(genomes1k_maf__gte=0)) | Q(genomes1k_maf__isnull=True))
 
-def filter_by_dbsnp(request, args):
-    dbsnp_exclude = request.GET.get('dbsnp_exclude', '')
-    if dbsnp_exclude == 'on':
-        args.append(Q(dbsnp_maf__isnull=True))
+
+def filter_by_gnomead_exomes(request, args):
+    gnomead_exomes_exclude = request.GET.get('gnomead_exomes_exclude', '')
+    if gnomead_exomes_exclude == 'on':
+        args.append(Q(gnomead_exome_maf__isnull=True))
     else:
-        dbsnp = request.GET.get('dbsnp_frequency', '')
+        dbsnp = request.GET.get('gnomead_exomes_frequency', '')
         if dbsnp != '':
             dbsnp = dbsnp.split(' - ')
             if len(dbsnp) == 2:
                 min = float(dbsnp[0]) 
                 max = float(dbsnp[1])
-                args.append((Q(dbsnp_maf__lte=max) & Q(dbsnp_maf__gte=min)) | Q(dbsnp_maf__isnull=True))    
+                args.append((Q(gnomead_exome_maf__lte=max) & Q(gnomead_exome_maf__gte=min)) | Q(gnomead_exome_maf__isnull=True))
             if len(dbsnp) == 1:
                 max = float(dbsnp[0])
-                args.append((Q(dbsnp_maf__lte=max) & Q(dbsnp_maf__gte=0)) | Q(dbsnp_maf__isnull=True))    
+                args.append((Q(gnomead_exome_maf__lte=max) & Q(gnomead_exome_maf__gte=0)) | Q(gnomead_exome_maf__isnull=True))    
 
-def filter_by_esp(request, args):
-    esp_exclude = request.GET.get('esp_exclude', '')
-    if esp_exclude == 'on':
-        args.append(Q(esp_maf__isnull=True))
+def filter_by_gnomead_genomes(request, args):
+    gnomead_genomes_exclude = request.GET.get('gnomead_genomes_exclude', '')
+    if gnomead_genomes_exclude == 'on':
+        args.append(Q(gnomead_genome_maf__isnull=True))
     else:
-        esp = request.GET.get('esp_frequency', '')
-        if esp != '':
-            esp = esp.split(' - ')
-            min = float(esp[0]) 
-            max = float(esp[1])
-            args.append((Q(esp_maf__lte=max) & Q(esp_maf__gte=min)) | Q(esp_maf__isnull=True))     
+        gnomead = request.GET.get('gnomead_genomes_frequency', '')
+        if gnomead != '':
+            gnomead = gnomead.split(' - ')
+            if len(gnomead) == 2:
+                min = float(gnomead[0]) 
+                max = float(gnomead[1])
+                args.append((Q(gnomead_genome_maf__lte=max) & Q(gnomead_genome_maf__gte=min)) | Q(gnomead_genome_maf__isnull=True))
+            if len(gnomead) == 1:
+                max = float(gnomead[0])
+                args.append((Q(gnomead_genome_maf__lte=max) & Q(gnomead_genome_maf__gte=0)) | Q(gnomead_genome_maf__isnull=True))
+
                
 # def filter_genomes1000(request, args):
 #     #1000genomes

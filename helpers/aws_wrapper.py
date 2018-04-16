@@ -2,6 +2,7 @@ import boto3
 from time import sleep
 from subprocess import run
 from django.conf import settings
+from settings.models import S3Credential
 
 class AWS:
 
@@ -99,30 +100,12 @@ class AWS:
     def install(self, ip):
 
         print('Install Worker')
-
-        command = "scp -r -o StrictHostKeyChecking=no ~/.aws ubuntu@%s:~/" % (ip)
+        command = "scp -o StrictHostKeyChecking=no /projects/scripts/install_worker_ubuntu.sh ubuntu@%s:~/" % (ip)
         run(command, shell=True)
 
-        command = "scp -o StrictHostKeyChecking=no ~/.ssh/id_rsa ubuntu@%s:~/.ssh" % (ip)
-        run(command, shell=True)
-
-        command = "scp -o StrictHostKeyChecking=no ~/.ssh/id_rsa.pub ubuntu@%s:~/.ssh" % (ip)
-        run(command, shell=True)
-
-        command = "scp -o StrictHostKeyChecking=no ~/.ssh/config ubuntu@%s:~/.ssh" % (ip)
-        run(command, shell=True)
-
-        command = "scp -o StrictHostKeyChecking=no scripts/install_worker_aws.sh ubuntu@%s:~/" % (ip)
-        run(command, shell=True)
-        
-        command = "scp -o StrictHostKeyChecking=no scripts/install_worker_aws.sh ubuntu@%s:~/" % (ip)
-        run(command, shell=True)
-
-        command = "scp -o StrictHostKeyChecking=no /projects/scripts/local_settings.py ubuntu@%s:~/" % (ip)
-        run(command, shell=True)
-
-        command = """nohup bash install_worker_aws.sh >nohup.out 2>&1 & sleep 2"""
-        command = """ssh -o StrictHostKeyChecking=no -t ubuntu@%s '%s'""" % (ip, command)
+        #
+        command = """nohup bash install_worker_ubuntu.sh >nohup.out 2>&1 & sleep 2"""
+        command = """ssh -o StrictHostKeyChecking=no  -t ubuntu@%s '%s'""" % (ip, command)
 
         run(command, shell=True)
 
@@ -138,13 +121,35 @@ class AWS:
 
         run(command, shell=True)
 
-    def upload(source,dest):
+    def upload(self,source,dest):
 
-        dest = '{}{}'.format(settings.UPLOAD_FOLDER, dest)
+        dest = '{}{}/'.format(settings.UPLOAD_FOLDER, dest)
 
-        command = 'aws s3 sync --profile {} {} {}'.format(settings.UPLOAD_FOLDER_PROFILE, source, dest)
+        command = 'aws s3 cp --profile {} {} {}'.format(settings.UPLOAD_FOLDER_PROFILE, source, dest)
+        # print(command)
         run(command, shell=True)
 
+    def get(self,source,task_id):
+
+        dest = '/projects/tasks/{}/'.format(task_id)
+
+        file_location = source.replace('s3://', '')
+
+        s3credentials = S3Credential.objects.all()
+        for cred in s3credentials:
+            for bucket in cred.buckets.splitlines():
+                # print(bucket)
+                if file_location.startswith(bucket):
+                    profile = cred.name
+                    file_bucket = bucket
+                    params = cred.params
+
+        if params == None:
+            params = ''
+        # dest = '{}{}'.format(settings.UPLOAD_FOLDER, dest)
+        command = 'aws s3 cp --profile {} {} {} {}'.format(profile, params, source.strip(), dest)
+        print(command)
+        run(command, shell=True)
 
 
 

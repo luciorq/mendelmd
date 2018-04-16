@@ -153,13 +153,13 @@ class FilterAnalysisForm(forms.Form):
     
     #DBSNP Frequency
 #    dbsnp_freq_option = forms.ChoiceField(required=False, choices=CHOICES, label="DBSNP Frequency")
-    dbsnp_frequency = forms.CharField(max_length=50, required=False, label="")
-    dbsnp_exclude = forms.BooleanField(required=False, label="EXCLUDE ALL VARIANTS PRESENT IN DBSNP")
+    gnomead_exomes_frequency = forms.CharField(max_length=50, required=False, label="")
+    gnomead_exomes_exclude = forms.BooleanField(required=False, label="EXCLUDE ALL VARIANTS PRESENT IN GnomeAD Exomes")
     
     #Variation Server Frequency
 #    variationserver_option = forms.ChoiceField(required=False, choices=CHOICES, label="ESP5400 Frequency")
-    esp_frequency = forms.CharField(max_length=50, required=False, label="")
-    esp_exclude = forms.BooleanField(required=False, label="EXCLUDE ALL VARIANTS PRESENT IN EXOME SEQUENCING PROJECT")
+    gnomead_genomes_frequency = forms.CharField(max_length=50, required=False, label="")
+    gnomead_genomes_exclude = forms.BooleanField(required=False, label="EXCLUDE ALL VARIANTS PRESENT IN GnomeAD Genomes")
     
     # hi_frequency = forms.CharField(max_length=50, required=False, label="")
     # hi_exclude = forms.BooleanField(required=False, label="Exclude all variants not in genes with Haploinsufficiency")

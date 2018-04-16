@@ -26,12 +26,14 @@ from individuals.models import Individual, Group
 from individuals.tasks import VerifyVCF, AnnotateVariants, PopulateVariants
 from variants.models import Variant
 
+from tasks.tasks import annotate_vcf, insert_vcf
+from tasks.models import Task
+
 def response_mimetype(request):
     if "application/json" in request.META['HTTP_ACCEPT']:
         return "application/json"
     else:
         return "text/plain"
-
 
 class JSONResponse(HttpResponse):
     """JSON response class."""
@@ -420,7 +422,15 @@ def annotate(request, individual_id):
 @login_required
 def populate(request, individual_id):
     individual = get_object_or_404(Individual, pk=individual_id)
-    PopulateVariants.delay(individual.id)
+    # PopulateVariants.delay(individual.id)
+    task = Task()
+    task.name = 'Populate {}'.format(individual.name)
+    task.action = 'populate'
+    task.manifest = {'individual':individual.name}
+    task.save()
+    task.individuals.add(individual)
+    insert_vcf.delay(task.id)
+
     messages.add_message(request, messages.INFO, "Your individual is being populated.")
 
     return redirect('dashboard')

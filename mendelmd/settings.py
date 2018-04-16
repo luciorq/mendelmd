@@ -196,6 +196,8 @@ CELERYBEAT_SCHEDULE = {
         'schedule': 30.0,
     },
 }
+if "celeryd" in sys.argv:
+    DEBUG = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 

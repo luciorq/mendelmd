@@ -10,8 +10,10 @@ from django.contrib import messages
 from django.conf import settings
 from django.utils.text import slugify
 from individuals.tasks import *
-
+from tasks.models import Task
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+from tasks.tasks import annotate_vcf, insert_vcf
 
 def index(request):
     if request.method == 'POST':
@@ -31,7 +33,7 @@ def index(request):
 
     n_individuals = individuals.count()
 
-    paginator = Paginator(individuals, 25) # Show 25 contacts per page
+    paginator = Paginator(individuals, 1000) # Show 25 contacts per page
 
     page = request.GET.get('page')
 
@@ -93,15 +95,36 @@ def bulk_action(request):
         if request.POST['selectionField'] == "Populate":
             for individual_id in individuals:
                 individual = get_object_or_404(Individual, pk=individual_id)
-                PopulateVariants.delay(individual.id)
+
+                task = Task()
+                task.name = 'Populate {}'.format(individual.name)
+                task.action = 'populate'
+                task.manifest = {'individual':individual.name}
+                task.save()
+                task.individuals.add(individual)
+                insert_vcf.delay(task.id)
+
+                # PopulateVariants.delay(individual.id)
             
         if request.POST['selectionField'] == "Annotate":
+            
             for individual_id in individuals:
+                
                 individual = get_object_or_404(Individual, pk=individual_id)
                 individual.status = 'new'
                 individual.n_lines = 0
                 individual.save()
-                AnnotateVariants.delay(individual.id)
+
+                task = Task()
+                task.name = 'Annotate {}'.format(individual.name)
+                task.action = 'annotate'
+                task.manifest = {}
+                task.save()
+                task.individuals.add(individual)
+                annotate_vcf.delay(task.id)
+
+                # AnnotateVariants.delay(individual.id)
+
         if request.POST['selectionField'] == "Find_Medical_Conditions_and_Medicines":
             for individual_id in individuals:
                 individual = get_object_or_404(Individual, pk=individual_id)
