@@ -495,6 +495,7 @@ def annotate_vcf(task_id):
 
 @app.task(queue="insertion")
 def insert_vcf(task_id):
+    
     task = Task.objects.get(pk=task_id)
     individual = task.individuals.all()[0]
 
@@ -549,7 +550,7 @@ def insert_vcf(task_id):
                 count2 += 1
 
                 #bulk insert variants objects
-                if count == 10000:
+                if count == 100000:
                     # print "Inserting %s " % (count2),
                     Variant.objects.bulk_create(variants)
                     # print ' Done!'

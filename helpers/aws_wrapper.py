@@ -100,6 +100,8 @@ class AWS:
     def install(self, ip):
 
         print('Install Worker')
+        sleep(60)
+        
         command = "scp -o StrictHostKeyChecking=no /projects/scripts/install_worker_ubuntu.sh ubuntu@%s:~/" % (ip)
         run(command, shell=True)
 
