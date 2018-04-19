@@ -81,7 +81,7 @@ class Variant(models.Model):
     # vep_feature_type = models.TextField(null=True, blank=True, db_index=True)
     # vep_consequence = models.TextField(null=True, blank=True, db_index=True)
     # vep_cdna_position = models.TextField(null=True, blank=True, db_index=True)
-    # vep_cds_position = models.TextField(null=True, blank=True, db_index=True)
+    vep_cds_position = models.TextField(null=True, blank=True, db_index=True)
     # vep_protein_position = models.TextField(null=True, blank=True, db_index=True)
     # vep_amino_acids = models.TextField(null=True, blank=True, db_index=True)
     # vep_codons = models.TextField(null=True, blank=True, db_index=True)
@@ -122,4 +122,3 @@ class Variant(models.Model):
 
     def get_fields(self):
     	return [(field.name, field.verbose_name.title().replace('_', ' ')) for field in Variant._meta.fields]
-

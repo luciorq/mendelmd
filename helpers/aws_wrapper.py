@@ -80,6 +80,7 @@ class AWS:
 
         instance.wait_until_running()
         print(instance.private_ip_address)
+        sleep(60)
         worker = {
             'id': instance_id,
             'ip': instance.private_ip_address,
@@ -100,8 +101,7 @@ class AWS:
     def install(self, ip):
 
         print('Install Worker')
-        sleep(60)
-        
+
         command = "scp -o StrictHostKeyChecking=no /projects/scripts/install_worker_ubuntu.sh ubuntu@%s:~/" % (ip)
         run(command, shell=True)
 
