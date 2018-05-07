@@ -15,8 +15,10 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 
 from tasks.tasks import check_file, run_qc
+from files.tasks import download_file
 
 from .tasks import import_project_files_task
+
 
 from settings.models import S3Credential
 
@@ -270,6 +272,20 @@ def bulk_action(request, project_id):
                    task.save()
                    check_file.delay(task.id)
                    file.status = 'scheduled'
+                   file.save()
+                if action == "download":
+
+                   task_manifest = {}
+                   task_manifest['file'] = file.id
+                   task_manifest['action'] = action
+                   task = Task(user=request.user)
+                   task.manifest = task_manifest
+                   task.status = 'new'
+                   task.action = action
+                   task.user = request.user
+                   task.save()
+                   download_file.delay(task.id)
+                   file.status = 'prepare for download'
                    file.save()
 
 

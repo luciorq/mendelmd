@@ -96,6 +96,8 @@ def index(request):
                 order_string = orderby
         else:
             order_string = 'name'
+    else:
+            order_string = 'name'
     
     if request.user.is_staff:#status='scheduled' size=0
         files = File.objects.filter(location__icontains=query, *args).order_by('sample')#size
