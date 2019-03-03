@@ -54,25 +54,40 @@ def VerifyVCF(individual_id):
 
     individual = get_object_or_404(Individual, pk=individual_id)
     print(individual.vcf_file)
-    filename = str(individual.vcf_file.name.split('/')[-1])
-
-    if individual.user:
-        path  = '%s/genomes/%s/%s' % (settings.BASE_DIR, slugify(individual.user.username), individual.id)
-    else:
-        path  = '%s/genomes/public/%s' % (settings.BASE_DIR, individual.id)
-
-    new_path = '/'.join(path.split('/')[:-1])
     
-    print(new_path)
+    file = individual.vcf_file
+    filename= str(file)
 
-    os.chdir(path)
+    dir = os.path.dirname(filename)
+    # create directory if it does not exist
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    
+    with open(filename, 'wb') as f:
+        f.write(file.read())     
+    f.close()
+
+    filename = os.path.basename(filename)
+
+    # filename = str(individual.vcf_file.name.split('/')[-1])
+
+    # if individual.user:
+    #     path  = '%s/genomes/%s/%s' % (settings.BASE_DIR, slugify(individual.user.username), individual.id)
+    # else:
+    #     path  = '%s/genomes/public/%s' % (settings.BASE_DIR, individual.id)
+
+    # new_path = '/'.join(path.split('/')[:-1])
+    
+    # print(new_path)
+
+    os.chdir(dir)
     
     print('filename', filename)
 
     if filename.endswith('.vcf'):
         command = 'cp %s sample.vcf' % (filename)
         os.system(command)
-    elif filename.endswith('.gz'):
+    elif filename.endswith('.gz') or filename.endswith('.bgz'):
         command = 'gunzip -c -d %s > sample.vcf' % (filename)
         os.system(command)
     elif filename.endswith('.zip'):
